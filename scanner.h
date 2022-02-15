@@ -1,3 +1,6 @@
+#ifndef SCANNER_H
+#define SCANNER_H 1
+
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -154,7 +157,7 @@ gatherinfo(struct manage_info *info_struct)
 check_again:
             if (isspace(data_ptr[*index]))
             {
-                /* ... */
+                /* do nothing */
             }
             else if (data_ptr[*index] == '*')
             {
@@ -191,3 +194,5 @@ main(int argc, char **argv)
 
     return 0;
 }
+
+#endif

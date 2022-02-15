@@ -1,3 +1,8 @@
+#ifndef MATHOPS_H
+#define MATHOPS_H 1
+
+#define ISDECIMAL(chr) (chr >= ZERO && chr <= NINE)
+
 enum {
     ADDITION        = '+',
     SUBTRACTION     = '-',
@@ -5,7 +10,9 @@ enum {
     DIVISION        = '/',
     MODULO          = '%',
     EQUALTO         = '=',
-    NOT             = '!'
+    NOT             = '!',
+    LESSER          = '<',
+    GREATER         = '>'
 } OPERATION;
 
 /* decimal definition */
@@ -20,6 +27,6 @@ enum {
     SEVEN           = '7', 
     EIGHT           = '8',
     NINE            = '9'
-} INTEGER;
+} DECIMAL;
 
-
+#endif
