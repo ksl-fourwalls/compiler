@@ -170,7 +170,7 @@ check_again:
                 else
                     goto check_again;
             }
-            else 
+            else if (!cflag)
                 // return pure string to the caller 
                 return token(info_struct);
 
