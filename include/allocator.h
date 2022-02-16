@@ -1,5 +1,5 @@
-#ifndef ALLOCATOR_H
-#define ALLOCATOR_H
+#ifndef FAST_ALLOCATOR_H
+#define FAST_ALLOCATOR_H
 
 
 #endif
