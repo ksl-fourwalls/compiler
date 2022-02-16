@@ -16,6 +16,7 @@
     exit(EXIT_FAILURE);       \
 } while (0)
 
+
 typedef struct {
     char ptr[BUFFER_SIZE];          // input buffer 
 
@@ -40,7 +41,11 @@ struct manage_info
 };
 
 
-
+/*
+ * initialize manage_info
+ * struct by opening compiler file
+ * descriptor in read only mode
+ */
 void
 init_manage_info(struct manage_info* info, const char *filename)
 {
@@ -48,8 +53,8 @@ init_manage_info(struct manage_info* info, const char *filename)
     if (info->fild < 0)
         errExit("open");
 
-    // first is skipped for
-    // storing previous value
+    // first index is skipped for
+    // storing prev value
     info->mQueue.start = 1;
     info->mQueue.end = 1;
 }
@@ -57,16 +62,11 @@ init_manage_info(struct manage_info* info, const char *filename)
 void
 free_manage_info(struct manage_info* info)
 {
-    /* Deallocate memory for manage info
-     * struct */
-    if (info->bufferq != NULL)
-    {
-        info->mQueue.start = 0;
-        info->mQueue.end = 0;
+    info->mQueue.start = 0;
+    info->mQueue.end = 0;
 
-        /* close open file descriptor */
-        close(info->fild);
-    }
+    /* close open file descriptor */
+    close(info->fild);
 }
 
 
@@ -85,49 +85,44 @@ safe_read(struct manage_info *info)
     info->mQueue.end = read(info->fild, &info->mQueue.ptr[1], BUFFER_SIZE-1);
 }
 
-
+/*
+ * return next character
+ * from the queue buffer
+ */
 char 
 next_chr(struct manage_info* info)
 {
-again:
-    if (info->mQueue.start < info->mQueue.end)
-        return info->mQueue.ptr[info->mQueue.start++];
+    if (info->mQueue.start == info->mQueue.end)
+    {
+        // read from the file
+        safe_read(info);
 
-    // read from the file
-    safe_read(info);
+        // for a read doesn't fails
+        if (info->mQueue.end == -1)
+            return -1;
+    }
 
-    // for a read doesn't fails
-    if (info->mQueue.end != -1)
-        goto again;
-    else
-        return -1;
+    return info->mQueue.ptr[info->mQueue.start++];
 }
 
 /*
- * prev_chr func:
- * must only used 
- * once per next_chr 
- * function use else 
- * we access
- * unprotected index
+ * below definition 
+ * should be called only
+ * once with respect to
+ * next_chr
  */
-char
-prev_chr(struct manage_info* info)
-{
-    return info->mQueue.ptr[--info->mQueue.start];
-}
-
+#define prev_chr(self) \
+    ((struct manage_info *)self)->mQueue.ptr[--info->mQueue.start]
 
 
 /*
- * gatherinfo function:
+ * token_fminfo function:
  * will check for three things
  * first is it cspace then
  * it will check for comment
- * 
- * lastly if string is clear
- * then we create copy of string
- * and return to the caller
+ *
+ * and returns token if
+ * it is lexeme 
  */
 struct token*
 token_fminfo(struct manage_info *info)
@@ -160,7 +155,7 @@ sanitycheck:
         }
         chrp = prev_chr(info);
     }
-
+    return;
 }
 
 int 
