@@ -78,7 +78,6 @@ safe_read(struct manage_info *info_struct)
         info_struct->cur_index = 0;
         return true;
     }
-
     return false;
 }
 
@@ -159,25 +158,29 @@ check_again:
             {
                 /* do nothing */
             }
-            else if (data_ptr[*index] == '*')
+            else if (cflag && data_ptr[*index] == '*')
             {
                 if (safe_read(info_struct) && data_ptr[*index] == '/')
                     cflag = false;
                 else 
                     goto check_again;
             }
-            else if (data_ptr[*index] == '/')
+            else if (!cflag && data_ptr[*index] == '/')
             {
                 if (safe_read(info_struct) && data_ptr[*index] == '*')
                     cflag = true;
-                else
-                    goto check_again;
+
+                /* '//' string is found. then skip until newline */
+                else if (safe_read(info_struct) && data_ptr[*index] == '/')
+                    while (safe_read(info_struct) && data_ptr[*index] == '\n');
+
+                else goto check_again;
             }
             else if (!cflag)
                 // return pure string to the caller 
                 return token(info_struct);
 
-            *index = *index + 1;
+            (*index)++;
         } while (*index < info_struct->buf_len);
     } 
 
