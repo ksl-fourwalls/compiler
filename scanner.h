@@ -16,48 +16,56 @@
     exit(EXIT_FAILURE);       \
 } while (0)
 
+typedef struct {
+    char ptr[BUFFER_SIZE];          // input buffer 
 
+    unsigned start;                 // current index for 
+                                    // circular buffer 
+
+    unsigned end;                   // End of circular buffer 
+} char_queue;
+
+
+/*
+ * manages data and
+ * size and other
+ * information reading
+ * input
+ */
 struct manage_info
 {
     int fild;                           /* file descriptor 
                                             for reading information */
-
-    char *buf_ptr;                      /* file descriptor buffer */
-    unsigned buf_len;                   /* buffer size */
-    unsigned cur_index;                 /* pointing to the current
-                                           index in the buf_ptr; */
+    char_queue mQueue;                  /* manage queue */
 };
 
+
+
 void
-init_manage_info(struct manage_info* info_struct, const char *filename)
+init_manage_info(struct manage_info* info, const char *filename)
 {
-    info_struct->fild = open(filename, O_RDONLY);
-    if (info_struct->fild < 0)
+    info->fild = open(filename, O_RDONLY);
+    if (info->fild < 0)
         errExit("open");
 
-    /* current index for buf_ptr */
-    info_struct->cur_index = 0;
-    info_struct->buf_len = 0;
-
-    if((info_struct->buf_ptr = malloc(sizeof(char) * BUFFER_SIZE)) == NULL)
-        errExit("malloc");
+    // first is skipped for
+    // storing previous value
+    info->mQueue.start = 1;
+    info->mQueue.end = 1;
 }
 
 void
-free_manage_info(struct manage_info* info_struct)
+free_manage_info(struct manage_info* info)
 {
     /* Deallocate memory for manage info
      * struct */
-    if (info_struct->buf_ptr != NULL)
+    if (info->bufferq != NULL)
     {
-        free(info_struct->buf_ptr);
-        info_struct->buf_ptr = NULL;
-
-        info_struct->buf_len = 0;
-        info_struct->cur_index = 0;
+        info->mQueue.start = 0;
+        info->mQueue.end = 0;
 
         /* close open file descriptor */
-        close(info_struct->fild);
+        close(info->fild);
     }
 }
 
@@ -66,63 +74,50 @@ free_manage_info(struct manage_info* info_struct)
  * read bytes from file descriptor
  * of manage_info struct
  */
-bool
-safe_read(struct manage_info *info_struct)
+void
+safe_read(struct manage_info *info)
 {
-    if (++info_struct->cur_index < info_struct->buf_len)
-        return true;
+    info->mQueue.start = 1;
 
-    if ((signed)(info_struct->buf_len = read(info_struct->fild, info_struct->buf_ptr, 
-                    BUFFER_SIZE)) > (signed)0)
-    {
-        info_struct->cur_index = 0;
-        return true;
-    }
-    return false;
+    // store previous character
+    info->mQueue.ptr[0] = info->mQueue.ptr[info->mQueue.end-1];
+
+    info->mQueue.end = read(info->fild, &info->mQueue.ptr[1], BUFFER_SIZE-1);
 }
 
+
+char 
+next_chr(struct manage_info* info)
+{
+again:
+    if (info->mQueue.start < info->mQueue.end)
+        return info->mQueue.ptr[info->mQueue.start++];
+
+    // read from the file
+    safe_read(info);
+
+    // for a read doesn't fails
+    if (info->mQueue.end != -1)
+        goto again;
+    else
+        return -1;
+}
 
 /*
- * return string
- * token from the
- * given input and
+ * prev_chr func:
+ * must only used 
+ * once per next_chr 
+ * function use else 
+ * we access
+ * unprotected index
  */
-char *
-token(struct manage_info *info_struct)
+char
+prev_chr(struct manage_info* info)
 {
-#ifndef BUFFERING
-#define BUFFERING 60
-
-    unsigned str_len;
-    char *str;
-
-    str_len = 0;
-
-    str = malloc(BUFFERING * sizeof(char));
-    if (str == NULL)
-        errExit("malloc");
-
-    do {
-        str[str_len++] = info_struct->buf_ptr[info_struct->cur_index];
-
-        /*
-         * take input
-         * string as buffer
-         * bytes inorder to
-         * decrease overhead
-         * of malloc
-         */
-        if (str_len % BUFFERING == 0)
-            str = realloc(str, (str_len + BUFFERING) * sizeof(char));
-
-    } while (safe_read(info_struct) && !isspace(info_struct->buf_ptr[info_struct->cur_index]));
-
-    str[str_len] = '\0';
-    return str;
-
-#undef BUFFERING
-#endif
+    return info->mQueue.ptr[--info->mQueue.start];
 }
+
+
 
 /*
  * gatherinfo function:
@@ -134,57 +129,38 @@ token(struct manage_info *info_struct)
  * then we create copy of string
  * and return to the caller
  */
-char *
-gatherinfo(struct manage_info *info_struct)
+struct token*
+token_fminfo(struct manage_info *info)
 {
-    unsigned *index;
-    bool cflag = false;         // comment flag
-    char *data_ptr;
+    char chrp;
 
-    index = &info_struct->cur_index;
-    data_ptr = info_struct->buf_ptr;
-
-    while (safe_read(info_struct))
+sanitycheck:
+    while ((chrp = next_chr(info)) != -1)
     {
-        do {
-/* safety check
- * that is done
- * if comment 
- * string is
- * incomplete 
- */
-check_again:
-            if (isspace(data_ptr[*index]))
-            {
-                /* do nothing */
-            }
-            else if (cflag && data_ptr[*index] == '*')
-            {
-                if (safe_read(info_struct) && data_ptr[*index] == '/')
-                    cflag = false;
-                else 
-                    goto check_again;
-            }
-            else if (!cflag && data_ptr[*index] == '/')
-            {
-                if (safe_read(info_struct) && data_ptr[*index] == '*')
-                    cflag = true;
+        if (isspace(chrp))
+            continue;
+        break;
+    }
 
-                /* '//' string is found. then skip until newline */
-                else if (safe_read(info_struct) && data_ptr[*index] == '/')
-                    while (safe_read(info_struct) && data_ptr[*index] == '\n');
+    if (chrp == '/')
+    {
+        chrp = next_chr(info);
+        if (chrp == '/')
+        {
+            for (;; (chrp = next_chr(info)) != -1)
+                if (chrp == '\n')
+                    goto sanitycheck;
+        }
+        else if (chrp == '*')
+        {
+            char prev;
+            for (;; prev = chrp, (chrp = next_chr(info)) != -1)
+                if (prev == '*' && chrp == '/')
+                    goto sanitycheck;
+        }
+        chrp = prev_chr(info);
+    }
 
-                else goto check_again;
-            }
-            else if (!cflag)
-                // return pure string to the caller 
-                return token(info_struct);
-
-            (*index)++;
-        } while (*index < info_struct->buf_len);
-    } 
-
-    return NULL;
 }
 
 int 
