@@ -5,7 +5,7 @@
 #define SSIZE 100
 #endif
 
-#define TOTAL_SMCHUNK_SIZE sizeof(struct node)
+#define TOTAL_SMCHUNK_SIZE sizeof(smalloc_node)
 
 
 #define errExit(msg) do { \
@@ -19,15 +19,15 @@
  * of same size which are
  * used frequently by an application
  */
-struct node {
+smalloc_node {
   char userinp[SSIZE];
-  struct node *next;
+  smalloc_node *next;
 };
 
 struct {
   size_t nunits;                // size total number of allocated units
-  struct node* freelist;        // list of free region of memory
-  struct node* newchunk;        // new node is used to create a newnode 
+  smalloc_node* freelist;        // list of free region of memory
+  smalloc_node* newchunk;        // new node is used to create a newnode 
                                 // from mmaped memory
 } memlist = { 0 };
 
@@ -76,7 +76,7 @@ void morecore()
 
 void *smalloc()
 {
-  struct node *free_list, *newchunk;
+  smalloc_node *free_list, *newchunk;
   void sfree(void *);
 
   for (;;) {
@@ -111,8 +111,9 @@ void sfree(void *addr)
 {
   if (addr != memlist.freelist)
   {
-    ((struct node *)addr)->next = memlist.freelist;
+    ((smalloc_node *)addr)->next = memlist.freelist;
     memlist.freelist = addr;
   }
 }
 #endif
+
