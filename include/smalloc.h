@@ -1,7 +1,17 @@
-#ifndef __SAME_SIZE_MALLOC
-#define __SAME_SIZE_MALLOC 1
+#ifndef _SAME_SIZE_MALLOC
+#define _SAME_SIZE_MALLOC 1
 
-#define SETSIZE(x) memlist.size = x
+#ifndef SSIZE
+#define SSIZE 100
+#endif
+
+#define TOTAL_SMCHUNK_SIZE sizeof(struct node)
+
+
+#define errExit(msg) do { \
+  perror(msg);            \
+  exit(EXIT_FAILURE);     \
+} while (0)
 
 /*
  * smalloc: allocator
@@ -10,105 +20,99 @@
  * used frequently by an application
  */
 struct node {
-  void *data;
+  char userinp[SSIZE];
   struct node *next;
 };
 
 struct {
-  unsigned size;                // size of one block
   size_t nunits;                // size total number of allocated units
-
   struct node* freelist;        // list of free region of memory
-
-  struct node* newnode;         // new node is used to create a newnode 
+  struct node* newchunk;        // new node is used to create a newnode 
                                 // from mmaped memory
-
-  struct node* mmap_list;       // pointer to mmap allocated block
-} 
-memlist = { 0 };
-
-/*
- * allocate large chunk of memory
- *
- * which contains small chunks of equal size which
- * speed up our process of allocating memory without
- * caring about what size of each is every time and
- * we do this haveing one freelist and one mmap_list
- * which contains poin
- *  -----------------------------------------------------
- *  | chunk 1   | chunk 2    |    chunk 3  |  chunk 4   |
- *  |-----------|------------|-------------|------------|
- *  | chunk 5   | chunk 6    |    chunk 7  |   ...      |
- *  |-----------|------------|-------------|------------|
- *  |           |            |             |            |
- *  |-----------|------------|-------------|------------|
- *  |           |            |             |            |
- *  |-----------|------------|-------------|------------|
- *  | ...       | ...        |    ...      |   ...      |
- *  -----------------------------------------------------
- *
- */
+} memlist = { 0 };
 
 
 /*
- * fire we check in free list
- * whether any of 
+ * allocates memory with
+ * mmap and free that
+ * memory address into
+ * free list for further
+ * use
  */
-void *
-smalloc(size_t size)
+void morecore()
 {
-  struct node* mtmp;
-  void *morecore();
- 
-  mtmp = memlist.freelist;
-  while (mtmp != NULL)
-  {
-    memlist.freelist = mtmp->next;
-    return mtmp;
-  }
+  void *mmap_memory;
+  void sfree(void *);
 
-  while (memlist.nunits)
-  {
-    memlist.nunits -= memlist.size;
-    memlist.data += memlist.size;
+  mmap_memory = mmap(0, 0x1000, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, 0, 0);
+  if (mmap_memory == MAP_FAILED)
+    errExit("malloc");
 
-    return memlist.data;
-  }
-  return morecore();
+  memlist.newchunk = mmap_memory+TOTAL_SMCHUNK_SIZE;
+  memlist.nunits = 0x1000/TOTAL_SMCHUNK_SIZE-1;
+
+  sfree(mmap_memory);
 }
 
-void *sfree(void *freedMem)
+/*
+ * smalloc: allocate memory firstly from the
+ * freelist or else it will frees and returns next 
+ * chunk from the mmaped_memory
+ *
+ * mmaped_memory
+ *
+ * freed chunk
+ * morecore
+ * |         -------------next call malloc frees
+ * |         |            next chunk address
+ * v         v
+ * -------------------------------------------
+ * | chunk 1 |  chunk 2 |   ...    |  ...    |
+ * -------------------------------------------
+ * |         |          |          |         |
+ * -------------------------------------------
+ *
+ */
+
+void *smalloc()
 {
-  struct node* mtmp;
-  mtmp = memlist.freelist;
+  struct node *free_list, *newchunk;
+  void sfree(void *);
 
-  mtmp = &((struct node *)freedMem)->next;
-  memlist.freelist = mtmp;
-}
+  for (;;) {
+    free_list = memlist.freelist;
 
-void *morecore()
-{
-  struct node* mtmp;
-  void *addr;
+    // chunk from free_list
+    if (free_list) 
+    {
+      memlist.freelist = free_list->next;
+      return free_list;
+    }
 
-  memlist.nunits += (0x1000+memlist.size) / (memlist.size);
+    // check number of remaining
+    // units in our newchunks
+    if (memlist.nunits--)
+    {
+      newchunk = memlist.newchunk++;
+      sfree(newchunk);
+      continue;
+    }
 
-  addr = mmap(0, 0x1000, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, 0, 0);
-  if (addr == MAP_FAILURE)
-  {
-    fprintf(stderr, "MAP_FAILURE\n");
-    exit(EXIT_FAILURE);
+    morecore();
   }
-
-  mtmp = memlist.mmap_list.next;
-
-  memlist.mmap_list.data = addr+sizeof(struct node);
-  memlist.mmap_list.next = addr;
-
-  ((struct node *)addr)->next = mtmp;
-
-  return memlist.mmap_list.data;
 }
 
-
+/*
+ * adds address to
+ * singly same sized
+ * free list
+ */
+void sfree(void *addr)
+{
+  if (addr != memlist.freelist)
+  {
+    ((struct node *)addr)->next = memlist.freelist;
+    memlist.freelist = addr;
+  }
+}
 #endif
