@@ -5,7 +5,11 @@
 #define SSIZE 100
 #endif
 
-#define TOTAL_SMCHUNK_SIZE sizeof(smalloc_node)
+#include <stdlib.h>
+#include <stdio.h>
+#include <sys/mman.h>
+
+#define TOTAL_SMCHUNK_SIZE sizeof(struct smalloc_node)
 
 
 #define errExit(msg) do { \
@@ -19,18 +23,21 @@
  * of same size which are
  * used frequently by an application
  */
-smalloc_node {
+struct smalloc_node {
   char userinp[SSIZE];
-  smalloc_node *next;
+  struct smalloc_node *next;
 };
 
 struct {
   size_t nunits;                // size total number of allocated units
-  smalloc_node* freelist;        // list of free region of memory
-  smalloc_node* newchunk;        // new node is used to create a newnode 
+  struct smalloc_node* freelist;        // list of free region of memory
+  struct smalloc_node* newchunk;        // new node is used to create a newnode 
                                 // from mmaped memory
 } memlist = { 0 };
 
+static void morecore();
+static void *smalloc();
+static void sfree(void *);
 
 /*
  * allocates memory with
@@ -39,10 +46,9 @@ struct {
  * free list for further
  * use
  */
-void morecore()
+static void morecore()
 {
   void *mmap_memory;
-  void sfree(void *);
 
   mmap_memory = mmap(0, 0x1000, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, 0, 0);
   if (mmap_memory == MAP_FAILED)
@@ -74,10 +80,10 @@ void morecore()
  *
  */
 
-void *smalloc()
+static void 
+*smalloc()
 {
-  smalloc_node *free_list, *newchunk;
-  void sfree(void *);
+  struct smalloc_node *free_list, *newchunk;
 
   for (;;) {
     free_list = memlist.freelist;
@@ -107,11 +113,11 @@ void *smalloc()
  * singly same sized
  * free list
  */
-void sfree(void *addr)
+static void sfree(void *addr)
 {
   if (addr != memlist.freelist)
   {
-    ((smalloc_node *)addr)->next = memlist.freelist;
+    ((struct smalloc_node *)addr)->next = memlist.freelist;
     memlist.freelist = addr;
   }
 }
