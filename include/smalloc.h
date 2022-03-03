@@ -121,6 +121,7 @@ static void *smalloc()
  */
 static void sfree(void *addr)
 {
+  // avoid double free
   if (addr != memlist.freelist)
   {
     ((struct smalloc_node *)addr)->next = memlist.freelist;
