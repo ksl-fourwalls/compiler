@@ -5,17 +5,11 @@
 #define SSIZE 100
 #endif
 
-#include <stdlib.h>
-#include <stdio.h>
+#include <assert.h>
 #include <sys/mman.h>
 
 #define TOTAL_SMCHUNK_SIZE sizeof(struct smalloc_node)
 
-
-#define errExit(msg) do { \
-  perror(msg);            \
-  exit(EXIT_FAILURE);     \
-} while (0)
 
 /*
  * smalloc: allocator
@@ -51,8 +45,7 @@ static void morecore()
   void *mmap_memory;
 
   mmap_memory = mmap(0, 0x1000, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, 0, 0);
-  if (mmap_memory == MAP_FAILED)
-    errExit("malloc");
+  assert(mmap_memory != MAP_FAILED);
 
   memlist.newchunk = mmap_memory+TOTAL_SMCHUNK_SIZE;
   memlist.nunits = 0x1000/TOTAL_SMCHUNK_SIZE-1;
@@ -80,8 +73,7 @@ static void morecore()
  *
  */
 
-static void 
-*smalloc()
+static void *smalloc()
 {
   struct smalloc_node *free_list, *newchunk;
 
@@ -112,6 +104,20 @@ static void
  * adds address to
  * singly same sized
  * free list
+ 
+   Free list memory
+   diagram 
+
+   --------------------------------------------
+   | data  | data | data | data | data | data |
+   |-------|------|------|------|------|------|
+   | next  | next | next | next | next | next |
+   --------------------------------------------
+      |       |      ^      |       ^     |
+      |       |      |      |       |     |
+      --------|-------      ---------     |
+      ^       |             ^             |
+      ---------             ---------------
  */
 static void sfree(void *addr)
 {
