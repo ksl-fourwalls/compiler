@@ -29,7 +29,7 @@ struct {
                                 // from mmaped memory
 } memlist = { 0 };
 
-static void morecore();
+static void *morecore();
 static void *smalloc();
 static void sfree(void *);
 
@@ -40,7 +40,7 @@ static void sfree(void *);
  * free list for further
  * use
  */
-static void morecore()
+static void *morecore()
 {
   void *mmap_memory;
 
@@ -50,7 +50,7 @@ static void morecore()
   memlist.newchunk = mmap_memory+TOTAL_SMCHUNK_SIZE;
   memlist.nunits = 0x1000/TOTAL_SMCHUNK_SIZE-1;
 
-  sfree(mmap_memory);
+  return mmap_memory;
 }
 
 /*
@@ -95,7 +95,7 @@ static void *smalloc()
       return newchunk;
     }
 
-    morecore();
+    return morecore();
   }
 }
 
