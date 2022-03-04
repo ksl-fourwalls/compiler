@@ -92,8 +92,7 @@ static void *smalloc()
     if (memlist.nunits--)
     {
       newchunk = memlist.newchunk++;
-      sfree(newchunk);
-      continue;
+      return newchunk;
     }
 
     morecore();
