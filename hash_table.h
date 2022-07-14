@@ -19,23 +19,12 @@ struct hash_t
 	size_t data;
 };
 
-struct hash_tree {
-	void *root;
-};
-
-// initialize hash treee struct with 
-// zeros
-void init_hash_tree(struct hash_tree *);
-
-// destroy hash tree free each hash tables
-void destroy_hash_tree(struct hash_tree *);
-
 // insert struct into hash tree
-void insert_hash(struct hash_tree *, const char*);
+void insert_hash(void *, const char*);
 
 // find string in hash table and returns
 // correponding hash struct
-struct hash_t *find_hash(struct hash_tree *, const char *);
+struct hash_t *search_hash(void *, const char *);
 
 // uses FNV hash to hash a nul terminated
 // string

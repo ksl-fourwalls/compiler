@@ -28,7 +28,7 @@ static int compare(const void *pa, const void *pb)
 }
 
 
-void insert_hash(struct hash_tree* htree, const char* str)
+void insert_hash(void *root, const char* str)
 {
 	struct hash_t* htab ;
 
@@ -39,25 +39,8 @@ void insert_hash(struct hash_tree* htree, const char* str)
 	htab->key = (char *)str;
 	string_hashing(htab); 
 
-	if (tsearch((void *) htab, &htree->root, compare) == NULL)
-		errExit("Unable to insert hash %lx\n", htab->data);
+	if (*(void **)tsearch((void *) htab, root, compare) == NULL)
+		errExit("Unable to store hash in hashtree\n");
 }
 
-void init_hash_tree(struct hash_tree* htree) 
-{ 
-	memset(htree, 0, sizeof(struct hash_tree));
-}
 
-void destroy_hash_tree(struct hash_tree* htree)
-{
-	tdestroy(htree->root, free);
-}
-
-struct hash_t *find_hash(struct hash_tree *htree, const char* str)
-{
-	struct hash_t htab = {
-		.key = (char *)str
-	};
-	string_hashing(&htab);
-	return *(void **)tfind((void *)&htab, &htree->root, compare);
-}

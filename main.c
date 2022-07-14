@@ -1,19 +1,11 @@
 #include <stdio.h>
-#include "hash_table.h"
+#include "hash_tree_stack.h"
 
 int main(int argc, char *argv[])
 {
-	struct hash_tree htree;
+	hash_tree_stack *htstack = NULL;
 	struct hash_t *htab;
 
-	init_hash_tree(&htree);
-	insert_hash(&htree, "fucker");
-
-	htab = find_hash(&htree, "fucker");
-	if (htab)
-	{
-		printf("%s\n", htab->key);
-	}
-
-	destroy_hash_tree(&htree);
+	init_hash_tree(&htstack);
+	destroy_hash_tree(htstack);
 }
