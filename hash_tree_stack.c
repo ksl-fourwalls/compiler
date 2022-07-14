@@ -1,5 +1,23 @@
 #include "hash_tree_stack.h"
 
+/*
+ * hash tree stack works as follows
+ *
+ * 	---------------- <------ htstack (top)
+ * 	|   htree[n]	|
+ * 	----------------
+ *	|   htree[n-1]	|-------------------------------------------   htree
+ * 	----------------					    /-----  ------\
+ *	|   htree[n-2]	|					child1 	child2
+ * 	-----------------					  /  \	 	 /  \
+ *	|    ...	|				      child3 child4  child5 child6
+ * 	----------------
+ *	|   htree[0]	|
+ * 	----------------
+ */
+
+// initialize hash tree root and store it into
+// stack from linked list.
 void init_hash_tree(hash_tree_stack** htstack)
 {
 	hash_tree_stack* tmp;
@@ -17,11 +35,13 @@ void init_hash_tree(hash_tree_stack** htstack)
 	*htstack = tmp;
 }
 
-void destroy_hash_tree(hash_tree_stack * htree)
+// destroy tree and change top of the
+// stack
+void destroy_hash_tree(hash_tree_stack **htstack)
 {
-	if (htree)
+	if (*htstack)
 	{
-		tdestroy(htree->root, free);
-		htree = htree->next;
+		tdestroy((*htstack)->root, free);
+		*htstack = (*htstack)->next;
 	}
 }

@@ -22,9 +22,6 @@ struct token
 
 struct _tag
 {
-
 };
-
-
 
 #endif

@@ -9,7 +9,7 @@ typedef struct hash_tree {
 	struct hash_tree *next;
 } hash_tree_stack;
 
-void init_hash_tree(hash_tree_stack**);
-void destroy_hash_tree(hash_tree_stack *);
+void init_hash_tree(hash_tree_stack **);
+void destroy_hash_tree(hash_tree_stack **);
 
 #endif

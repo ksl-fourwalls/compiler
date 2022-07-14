@@ -43,4 +43,13 @@ void insert_hash(void *root, const char* str)
 		errExit("Unable to store hash in hashtree\n");
 }
 
+struct hash_t *search_hash(void *root, const char* str)
+{
+	struct hash_t htab;
+
+	htab.key = (char *)str;
+	string_hashing(&htab);
+
+	return *(void **)tfind((void *) &htab, root, compare);
+}
 

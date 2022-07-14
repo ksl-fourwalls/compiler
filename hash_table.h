@@ -15,8 +15,8 @@
  */
 struct hash_t
 {
-	char *key;
-	size_t data;
+	uint64_t data;
+	char*    key;
 };
 
 // insert struct into hash tree
