@@ -23,20 +23,29 @@ void printTokens(struct ProgramScanner* self)
 
 		switch (m_Token->tag)
 		{
-		case Tag_NUMBER:
+		case Tag_Number:
 			printf(" %lld ", m_Token->value.integer);
 			break;
 
-		case Tag_UNKNOWN:
+		case Tag_Float:
+			printf(" %lf ", m_Token->value.floatval);
+			break;
+
+		case Tag_Char:
+			 printf(" %c ", (char)m_Token->value.integer);
+
+		case Tag_Unknown:
 			printf(" %c ", (char)m_Token->value.integer);
 			break;
 
 		case Tag_INC: case Tag_DEC: case Tag_OR: case Tag_AND:
 		case Tag_EQ: case Tag_NE: case Tag_LE: case Tag_GE:
-		case Tag_STRING: case Tag_IDENTIFIER:
+		case Tag_String: case Tag_Identifier: 
 			printf(" %s ", m_Token->value.word);
 			break;
-
+		case Tag_Comment:
+			printf("%s", m_Token->value.word);
+			break;
 		}
 	}
 	printf("\n");

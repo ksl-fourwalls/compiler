@@ -7,22 +7,19 @@ struct ProgramScanner {
 	FILE* filp;
 
 	struct {
-		struct token* INC;
-		struct token* DEC;
-		struct token* OR;
-		struct token* AND;
-		struct token* EQ;
-		struct token* NE;
-		struct token* LE;
-		struct token* GE;
+		struct token *INC, *DEC, *OR, 
+			*AND, *EQ, *NE, *LE, *GE;
 	} Word;
 };
 
 enum Tag {
-	Tag_NUMBER,
-	Tag_IDENTIFIER,
-	Tag_UNKNOWN,
-	Tag_STRING,
+	Tag_Number,
+	Tag_Unknown,
+	Tag_String,
+	Tag_Float,
+	Tag_Identifier,
+	Tag_Char,
+	Tag_Comment,
 
 	Tag_INC,
 	Tag_DEC,
@@ -53,15 +50,12 @@ void initProgramScanner(struct ProgramScanner* self, FILE *filp)
 	self->Word.GE = Word("<=", Tag_GE);
 }
 
-void ReadChr(struct ProgramScanner* self)
-{
-	self->peek = getc(self->filp);
-}
 
 
 struct token {
 	union { 
 		long long int integer; 
+		double floatval;
 		char* word; 
 	} value;
 
@@ -79,28 +73,36 @@ struct token* Word(char* string, enum Tag tag)
 	m_Token->value.word = string;
 }
 
+struct token* Float(double value)
+{
+	struct token* m_Token = malloc(sizeof(struct token));
+	assert(m_Token != NULL);
+	m_Token->tag = Tag_Float;
+	m_Token->value.floatval = value;
+}
+
 struct token* Integer(long long int value)
 {
 	struct token* m_Token = malloc(sizeof(struct token));
 	assert(m_Token != NULL);
 
-	m_Token->tag = Tag_NUMBER;
+	m_Token->tag = Tag_Number;
 	m_Token->value.integer = value;
 }
 
-struct token* Token(char peek)
+struct token* Token(char peek, enum Tag tag)
 {
 	struct token* m_Token = malloc(sizeof(struct token));
 	assert(m_Token != NULL);
 
-	m_Token->tag = Tag_UNKNOWN;
+	m_Token->tag = tag;
 	m_Token->value.integer = (long long int)peek;
 }
 
  
 struct token* generateToken(struct ProgramScanner *self)
 {
-	for (;; ReadChr(self))
+	for (;; self->peek = getc(self->filp))
 	{
 		if (self->peek == ' ' || self->peek == '\t');
 		else if (self->peek == '\n') ++self->line;
@@ -110,89 +112,111 @@ struct token* generateToken(struct ProgramScanner *self)
 
 	switch (self->peek)
 	{
+		case '/':
+		{
+			self->peek = getc(self->filp);
+			if (self->peek == '/')
+			{
+				struct string m_String = { 0 };
+				// start of comment
+				string_cat(&m_String, "//");
+				self->peek = string_getdelim(&m_String, '\n', self->filp) ? EOF : ' ';
+				return Word(string_cstr(&m_String), Tag_Comment);
+			}
+			else if (self->peek == '*')
+			{
+				struct string m_String = { 0 };
+				string_cat(&m_String, "/*");
+				self->peek = string_getuntil(&m_String, "*/", self->filp) ? EOF : ' ';
+				return Word(string_cstr(&m_String), Tag_Comment);
+			}
+			return Token('/', Tag_Unknown);
+		}
+
 		case '&':
 		{
-			ReadChr(self);
+			self->peek = getc(self->filp);
 			if (self->peek == '&') 
 			{
 				self->peek = ' ';
 				return self->Word.AND;
 			}
-			return Token('&');
+			return Token('&', Tag_Unknown);
 		}
 
 		case '|':
 		{
-			ReadChr(self);
+			self->peek = getc(self->filp);
 			if (self->peek == '|') 
 			{
 				self->peek = ' ';
 				return self->Word.OR;
 			}
-			return Token('|');
+			return Token('|', Tag_Unknown);
 		}
 		case '+':
 		{
-			ReadChr(self);
+			self->peek = getc(self->filp);
 			if (self->peek == '+') 
 			{
 				self->peek = ' ';
 				return self->Word.INC;
 			}
-			return Token('-');
+			return Token('-', Tag_Unknown);
 		}
 
 		case '-':
 		{
-			ReadChr(self);
+			self->peek = getc(self->filp);
 			if (self->peek == '-') 
 			{
 				self->peek = ' ';
 				return self->Word.DEC;
 			}
-			return Token('-');
+			return Token('-', Tag_Unknown);
 		}
 
 		case '!':
 		{
-			ReadChr(self);
+			self->peek = getc(self->filp);
 			if (self->peek == '=') 
 			{
 				self->peek = ' ';
 				return self->Word.NE;
 			}
-			return Token('!');
+			return Token('!', Tag_Unknown);
 		}
 
 		case '>':
 		{
-			ReadChr(self);
+			self->peek = getc(self->filp);
 			if (self->peek == '=') 
 			{
 				self->peek = ' ';
 				return self->Word.GE;
 			}
-			return Token('>');
+			return Token('>', Tag_Unknown);
 		}
 
 		case '<':
 		{
-			ReadChr(self);
+			self->peek = getc(self->filp);
 			if (self->peek == '=') 
 			{
 				self->peek = ' ';
 				return self->Word.LE;
 			}
-			return Token('<');
+			return Token('<',Tag_Unknown );
 		}
 		case '=':
 		{
 			struct token *m_Token;
-			ReadChr(self);
-			m_Token = self->peek == '=' ? self->Word.EQ : Token('=');
+			self->peek = getc(self->filp);
+			m_Token = self->peek == '=' ? self->Word.EQ : Token('=', Tag_Unknown);
 			self->peek = ' ';
 			return m_Token;
 		}
+
 
 		case '"': 
 		{
@@ -200,15 +224,15 @@ struct token* generateToken(struct ProgramScanner *self)
 			while (1) 
 			{
 				string_push(&m_String, self->peek);
-				ReadChr(self);
+				self->peek = getc(self->filp);
 				if (self->peek == EOF) 
-					return Word(string_cstr(&m_String), Tag_STRING);
+					return Word(string_cstr(&m_String), Tag_String);
 
 				if ( self->peek == '"' && m_String.bufptr[m_String.buflen-1] != '\\')
 				{
 					string_push(&m_String, self->peek);
 					self->peek = ' ';
-					return Word(string_cstr(&m_String), Tag_STRING);
+					return Word(string_cstr(&m_String), Tag_String);
 				}
 			}
 		}
@@ -219,9 +243,19 @@ struct token* generateToken(struct ProgramScanner *self)
 		int value = 0;
 		do {
 			value = 10 * value + (self->peek - 0x30);
-			ReadChr(self);
+			self->peek = getc(self->filp);
 		} while (isdigit(self->peek));
-		return Integer(value);
+		if (self->peek != '.') return Integer(value);
+		float x = value;
+		float d = 10.0;
+
+		for (;;) {
+			self->peek = getc(self->filp);
+			if (!isdigit(self->peek)) break;
+			x = x + (float)(self->peek-0x30) / d;
+			d = d * 10;
+		}
+		return Float(x);
 	}
 
 	if (isalpha(self->peek) || self->peek == '_')
@@ -229,12 +263,12 @@ struct token* generateToken(struct ProgramScanner *self)
 		struct string m_String = { 0 };
 		do {
 			string_push(&m_String, self->peek);
-			ReadChr(self);
+			self->peek = getc(self->filp);
 		} while (isalnum(self->peek) || self->peek == '_');
-		return Word(string_cstr(&m_String), Tag_IDENTIFIER);
+		return Word(string_cstr(&m_String), Tag_Identifier);
 	}
 
-	struct token *m_Token = Token(self->peek);
+	struct token *m_Token = Token(self->peek, Tag_Unknown);
 	self->peek = ' ';
 	return m_Token;
 }
