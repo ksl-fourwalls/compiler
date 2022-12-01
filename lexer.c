@@ -1,37 +1,6 @@
-#ifndef TOKEN_GEN_H
-#define TOKEN_GEN_H
+#include "lexer.h"
 
-struct ProgramScanner {
-	int peek;
-	int line;
-	FILE* filp;
-
-	struct {
-		struct token *INC, *DEC, *OR, 
-			*AND, *EQ, *NE, *LE, *GE;
-	} Word;
-};
-
-enum Tag {
-	Tag_Number,
-	Tag_Unknown,
-	Tag_String,
-	Tag_Float,
-	Tag_Identifier,
-	Tag_Char,
-	Tag_Comment,
-
-	Tag_INC,
-	Tag_DEC,
-	Tag_OR,
-	Tag_AND,
-	Tag_EQ,
-	Tag_NE,
-	Tag_LE,
-	Tag_GE,
-};
-
-void initProgramScanner(struct ProgramScanner* self, FILE *filp)
+void initLexicalScanner(struct LexicalScanner* self, FILE *filp)
 {
 	struct token* Word(char* string, enum Tag tag);
 
@@ -42,27 +11,21 @@ void initProgramScanner(struct ProgramScanner* self, FILE *filp)
 	self->Word.INC = Word("++", Tag_INC);
 	self->Word.DEC = Word("--", Tag_DEC);
 
-	self->Word.OR = Word("||", Tag_OR);
+	self->Word.CMUL = Word("*=", Tag_CMUL);
+	self->Word.CADD = Word("+=", Tag_CADD);
+	self->Word.CSUB = Word("-=", Tag_CSUB);
+	self->Word.CDIV = Word("/=", Tag_CDIV);
+	self->Word.CXOR = Word("^=", Tag_CXOR);
+	self->Word.CAND = Word("&=", Tag_CAND);
+	self->Word.COR = Word("|=", Tag_COR);
+
 	self->Word.AND = Word("&&", Tag_AND);
+	self->Word.OR = Word("||", Tag_OR);
 	self->Word.EQ = Word("==", Tag_EQ);
 	self->Word.NE = Word("!=", Tag_NE);
 	self->Word.LE = Word(">=", Tag_LE);
 	self->Word.GE = Word("<=", Tag_GE);
 }
-
-
-
-struct token {
-	union { 
-		long long int integer; 
-		double floatval;
-		char* word; 
-	} value;
-
-	int tag;
-	int attribute;
-
-};
 
 struct token* Word(char* string, enum Tag tag)
 {
@@ -77,6 +40,7 @@ struct token* Float(double value)
 {
 	struct token* m_Token = malloc(sizeof(struct token));
 	assert(m_Token != NULL);
+
 	m_Token->tag = Tag_Float;
 	m_Token->value.floatval = value;
 }
@@ -100,7 +64,7 @@ struct token* Token(char peek, enum Tag tag)
 }
 
  
-struct token* generateToken(struct ProgramScanner *self)
+struct token* generateToken(struct LexicalScanner *self)
 {
 	for (;; self->peek = getc(self->filp))
 	{
@@ -115,20 +79,27 @@ struct token* generateToken(struct ProgramScanner *self)
 		case '/':
 		{
 			self->peek = getc(self->filp);
+			// single line comments
 			if (self->peek == '/')
 			{
 				struct string m_String = { 0 };
-				// start of comment
 				string_cat(&m_String, "//");
 				self->peek = string_getdelim(&m_String, '\n', self->filp) ? EOF : ' ';
 				return Word(string_cstr(&m_String), Tag_Comment);
 			}
+			// "/*" multiline comments
 			else if (self->peek == '*')
 			{
 				struct string m_String = { 0 };
 				string_cat(&m_String, "/*");
 				self->peek = string_getuntil(&m_String, "*/", self->filp) ? EOF : ' ';
 				return Word(string_cstr(&m_String), Tag_Comment);
+			}
+			// "/=" equalto operator
+			else if (self->peek == '=')
+			{
+				self->peek = ' ';
+				return self->Word.CDIV;
 			}
 			return Token('/', Tag_Unknown);
 		}
@@ -162,6 +133,12 @@ struct token* generateToken(struct ProgramScanner *self)
 				self->peek = ' ';
 				return self->Word.INC;
 			}
+
+			else if (self->peek == '=')
+			{
+				self->peek = ' ';
+				return self->Word.CADD;
+			}
 			return Token('-', Tag_Unknown);
 		}
 
@@ -173,7 +150,23 @@ struct token* generateToken(struct ProgramScanner *self)
 				self->peek = ' ';
 				return self->Word.DEC;
 			}
+			else if (self->peek == '=')
+			{
+				self->peek = ' ';
+				return self->Word.CSUB;
+			}
 			return Token('-', Tag_Unknown);
+		}
+
+		case '*':
+		{
+			self->peek = getc(self->filp);
+			if (self->peek == '=') 
+			{
+				self->peek = ' ';
+				return self->Word.CMUL;
+			}
+			return Token('*', Tag_Unknown);
 		}
 
 		case '!':
@@ -206,7 +199,7 @@ struct token* generateToken(struct ProgramScanner *self)
 				self->peek = ' ';
 				return self->Word.LE;
 			}
-			return Token('<',Tag_Unknown );
+			return Token('<', Tag_Unknown);
 		}
 		case '=':
 		{
@@ -241,24 +234,25 @@ struct token* generateToken(struct ProgramScanner *self)
 	if (isdigit(self->peek))
 	{
 		int value = 0;
+		float x, d;
+
 		do {
 			value = 10 * value + (self->peek - 0x30);
 			self->peek = getc(self->filp);
 		} while (isdigit(self->peek));
 		if (self->peek != '.') return Integer(value);
-		float x = value;
-		float d = 10.0;
 
-		for (;;) {
+		
+		for (x = value, d = 10.0;; d *= 10) {
 			self->peek = getc(self->filp);
-			if (!isdigit(self->peek)) break;
+			if (!isdigit(self->peek)) 
+				break;
 			x = x + (float)(self->peek-0x30) / d;
-			d = d * 10;
 		}
 		return Float(x);
 	}
 
-	if (isalpha(self->peek) || self->peek == '_')
+	else if (isalpha(self->peek) || self->peek == '_')
 	{
 		struct string m_String = { 0 };
 		do {
@@ -267,9 +261,40 @@ struct token* generateToken(struct ProgramScanner *self)
 		} while (isalnum(self->peek) || self->peek == '_');
 		return Word(string_cstr(&m_String), Tag_Identifier);
 	}
-
-	struct token *m_Token = Token(self->peek, Tag_Unknown);
+	struct token *m_Token;
+	m_Token = Token(self->peek, Tag_Unknown); 
 	self->peek = ' ';
 	return m_Token;
 }
-#endif
+
+void printTokens(struct LexicalScanner* self)
+{
+	struct token* m_Token;
+	int prevline = 1;
+
+	// print all tokens
+	printf("# line %-10d ", prevline);
+	while ((m_Token = generateToken(self)) != NULL)
+	{
+		if (prevline != self->line) {
+			prevline = self->line;
+			printf("\n# line %-10d ", prevline);
+		}
+
+		switch (m_Token->tag)
+		{
+		case Tag_Number: printf(" %lld ", m_Token->value.integer); 	break;
+		case Tag_Float: printf(" %lf ", m_Token->value.floatval); 	break; 
+		case Tag_Char: printf(" %c ", (char)m_Token->value.integer); 	break;
+		case Tag_Unknown: printf(" %c ", (char)m_Token->value.integer); break;
+		case Tag_Comment: printf("%s", m_Token->value.word); 		break;
+
+		case Tag_INC: case Tag_DEC: case Tag_OR: case Tag_AND:
+		case Tag_EQ: case Tag_NE: case Tag_LE: case Tag_GE:
+		case Tag_String: case Tag_Identifier: 
+			printf(" %s ", m_Token->value.word);
+			break;
+		}
+	}
+	printf("\n");
+}

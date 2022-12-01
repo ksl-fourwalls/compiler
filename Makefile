@@ -1,6 +1,6 @@
 # If the first argument is "run"...
 all:
-	gcc *.c -o compiler
+	gcc stringbuf.c compile.c lexer.c -g -o compiler
 
 
 ifeq (run,$(firstword $(MAKECMDGOALS)))
@@ -19,7 +19,7 @@ run:
 
 
 debug:
-	gcc *.c -g -o compiler
+	gcc stringbuf.c compiler.c lexer.c -g -o compiler
 	gdb ./compiler 
 clean:
 	rm compiler
