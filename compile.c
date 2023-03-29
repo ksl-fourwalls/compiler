@@ -18,6 +18,7 @@ int main(int argc, char *argv[])
 
 	initLexicalScanner(&pscanner, filp);
 	printTokens(&pscanner);
+	freeLexicalScanner(&pscanner);
 
 	fclose(filp);
 	return 0;

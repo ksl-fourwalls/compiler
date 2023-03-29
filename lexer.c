@@ -1,12 +1,45 @@
+#include "include/utils.h"
 #include "lexer.h"
+
+#include <stdint.h>
+
+
+static int32_t fnv_1a(const char* str)
+{
+	const int32_t FNV_offset_basis = 0x811c9dc5;
+	const int32_t FNV_prime = 0x01000193;
+
+	int32_t hash = FNV_offset_basis;
+
+	for (; *str != '\0'; str++)
+	{
+		hash ^= (int32_t)*str;
+		hash *= FNV_prime;
+	}
+
+	return hash;
+
+}
 
 void initLexicalScanner(struct LexicalScanner* self, FILE *filp)
 {
+	const char* type[] = {
+		"float", "const", "volatile",
+		"int", "char", "unsigned", "signed",
+	};
 	struct token* Word(char* string, enum Tag tag);
 
 	self->peek = ' ';
 	self->line = 1;
 	self->filp = filp;
+
+	self->type.buflen = ARRAYSIZE(type);
+	self->type.bufptr = malloc(self->type.buflen * sizeof(int32_t));
+
+	assert(self->type.bufptr != NULL);
+
+	for (int idx = 0; idx < ARRAYSIZE(type); idx++)
+		self->type.bufptr[idx] = fnv_1a(type[idx]);
 
 	self->Word.INC = Word("++", Tag_INC);
 	self->Word.DEC = Word("--", Tag_DEC);
@@ -66,6 +99,8 @@ struct token* Token(char peek, enum Tag tag)
  
 struct token* generateToken(struct LexicalScanner *self)
 {
+	struct token *m_Token;
+
 	for (;; self->peek = getc(self->filp))
 	{
 		if (self->peek == ' ' || self->peek == '\t');
@@ -225,6 +260,7 @@ struct token* generateToken(struct LexicalScanner *self)
 				{
 					string_push(&m_String, self->peek);
 					self->peek = ' ';
+
 					return Word(string_cstr(&m_String), Tag_String);
 				}
 			}
@@ -255,13 +291,24 @@ struct token* generateToken(struct LexicalScanner *self)
 	else if (isalpha(self->peek) || self->peek == '_')
 	{
 		struct string m_String = { 0 };
+		char* c_str;
+		int32_t strhash;
+
 		do {
 			string_push(&m_String, self->peek);
 			self->peek = getc(self->filp);
 		} while (isalnum(self->peek) || self->peek == '_');
+
+		c_str = string_cstr(&m_String);
+		strhash = fnv_1a(c_str);
+
+		for (int idx = 0; idx < self->type.buflen; idx++)
+			if (self->type.bufptr[idx] == strhash)
+				return Word(c_str, Tag_type);
+
 		return Word(string_cstr(&m_String), Tag_Identifier);
 	}
-	struct token *m_Token;
+
 	m_Token = Token(self->peek, Tag_Unknown); 
 	self->peek = ' ';
 	return m_Token;
@@ -294,7 +341,16 @@ void printTokens(struct LexicalScanner* self)
 		case Tag_String: case Tag_Identifier: 
 			printf(" %s ", m_Token->value.word);
 			break;
+
+		case Tag_type: 
+			printf (" type: %s ", m_Token->value.word); 
+			       break;
 		}
 	}
 	printf("\n");
+}
+
+void freeLexicalScanner(struct LexicalScanner *self)
+{
+	free(self->type.bufptr);
 }

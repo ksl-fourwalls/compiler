@@ -14,6 +14,9 @@
 #include <unistd.h>
 #include <search.h>
 
+
+#define ARRAYSIZE(x) (sizeof(x)/sizeof(*x))
+
 #define errExit(...) do {		\
 	fprintf(stderr, __VA_ARGS__);	\
 	exit(EXIT_FAILURE);		\

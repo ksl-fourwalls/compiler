@@ -1,4 +1,5 @@
 #ifndef LEXER_GEN_H
+
 #define LEXER_GEN_H
 
 #include <stdio.h>
@@ -10,10 +11,22 @@
 #include <ctype.h>
 #include "stringbuf.h"
 
+
+/*
+ *                   Token
+ *                  /  |  \
+ *                 /   |   \
+ *                /    |    \
+ *               /     |     \
+ *            string float integer
+ */
 struct LexicalScanner {
 	int peek;
 	int line;
 	FILE* filp;
+	struct {
+		int32_t *bufptr, buflen;
+	} type;
 
 	struct {
 		struct token *INC, *DEC, *OR, 
@@ -32,6 +45,7 @@ enum Tag {
 	Tag_Identifier,
 	Tag_Char,
 	Tag_Comment,
+	Tag_type,
 
 	// complex operation
 	Tag_CMUL,
@@ -68,5 +82,6 @@ struct token {
 void initLexicalScanner(struct LexicalScanner* self, FILE *filp);
 struct token* generateToken(struct LexicalScanner *self);
 void printTokens(struct LexicalScanner* self);
+void freeLexicalScanner(struct LexicalScanner *self);
 
 #endif

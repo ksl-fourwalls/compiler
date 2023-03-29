@@ -1,0 +1,31 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_OUTPUT_EXCMD	mixed	/number, pattern, mixed, or combineV2/
+!_TAG_OUTPUT_FILESEP	slash	/slash or backslash/
+!_TAG_OUTPUT_MODE	u-ctags	/u-ctags or e-ctags/
+!_TAG_PATTERN_LENGTH_LIMIT	96	/0 for no limit/
+!_TAG_PROC_CWD	/home/vicktor/Documents/compiler/	//
+!_TAG_PROGRAM_AUTHOR	Universal Ctags Team	//
+!_TAG_PROGRAM_NAME	Universal Ctags	/Derived from Exuberant Ctags/
+!_TAG_PROGRAM_URL	https://ctags.io/	/official site/
+!_TAG_PROGRAM_VERSION	5.9.0	//
+Float	lexer.c	/^struct token* Float(double value)$/;"	f	typeref:struct:token *
+Integer	lexer.c	/^struct token* Integer(long long int value)$/;"	f	typeref:struct:token *
+Token	lexer.c	/^struct token* Token(char peek, enum Tag tag)$/;"	f	typeref:struct:token *
+Word	lexer.c	/^struct token* Word(char* string, enum Tag tag)$/;"	f	typeref:struct:token *
+compare	hash_table.c	/^static int compare(const void *pa, const void *pb)$/;"	f	typeref:typename:int	file:
+destroy_hash_tree	hash_tree_stack.c	/^void destroy_hash_tree(hash_tree_stack **htstack)$/;"	f	typeref:typename:void
+generateToken	lexer.c	/^struct token* generateToken(struct LexicalScanner *self)$/;"	f	typeref:struct:token *
+initLexicalScanner	lexer.c	/^void initLexicalScanner(struct LexicalScanner* self, FILE *filp)$/;"	f	typeref:typename:void
+init_hash_tree	hash_tree_stack.c	/^void init_hash_tree(hash_tree_stack** htstack)$/;"	f	typeref:typename:void
+insert_hash	hash_table.c	/^void insert_hash(void *root, const char* str)$/;"	f	typeref:typename:void
+main	compile.c	/^int main(int argc, char *argv[])$/;"	f	typeref:typename:int
+main	main.c	/^int main(int argc, char *argv[])$/;"	f	typeref:typename:int
+printTokens	lexer.c	/^void printTokens(struct LexicalScanner* self)$/;"	f	typeref:typename:void
+search_hash	hash_table.c	/^struct hash_t *search_hash(void *root, const char* str)$/;"	f	typeref:struct:hash_t *
+string_cat	stringbuf.c	/^void string_cat(struct string* self, char* catstr)$/;"	f	typeref:typename:void
+string_cstr	stringbuf.c	/^char* string_cstr(struct string* self)$/;"	f	typeref:typename:char *
+string_getdelim	stringbuf.c	/^bool string_getdelim(struct string* self, int delim, FILE* filp)$/;"	f	typeref:typename:bool
+string_getuntil	stringbuf.c	/^bool string_getuntil(struct string* self, char* peekstr, FILE* filp)$/;"	f	typeref:typename:bool
+string_hashing	hash_table.c	/^void string_hashing(struct hash_t * new_hash)$/;"	f	typeref:typename:void
+string_push	stringbuf.c	/^void string_push(struct string* self, char pchar)$/;"	f	typeref:typename:void
