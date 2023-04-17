@@ -3,6 +3,8 @@
 #define __UTIL_H__ 1
 
 #define _GNU_SOURCE
+
+#include <search.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -12,7 +14,6 @@
 #include <ctype.h>
 
 #include <unistd.h>
-#include <search.h>
 
 
 #define ARRAYSIZE(x) (sizeof(x)/sizeof(*x))

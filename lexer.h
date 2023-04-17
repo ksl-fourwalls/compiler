@@ -9,6 +9,7 @@
 
 #include <assert.h>
 #include <ctype.h>
+#include <search.h>
 #include "stringbuf.h"
 
 
@@ -24,26 +25,28 @@ struct LexicalScanner {
 	int peek;
 	int line;
 	FILE* filp;
-	struct {
-		int32_t *bufptr, buflen;
-	} type;
 
 	struct {
 		struct token *INC, *DEC, *OR, 
 			*AND, *EQ, *NE, *LE, *GE,
 			*CMUL, *CADD, *CSUB, *CDIV,
-			*CXOR, *COR, *CAND;
+			*CXOR, *COR, *CAND, *WHILE,
+			*BREAK, *DO, *IF, *ELSE;
 
 	} Word;
+
+	struct token *keywordTokens;
 };
+
+
 
 enum Tag {
 	Tag_Number,
 	Tag_Unknown,
 	Tag_String,
-	Tag_Float,
+	Tag_FloatNumber,
 	Tag_Identifier,
-	Tag_Char,
+	Tag_Byte,
 	Tag_Comment,
 	Tag_type,
 
@@ -64,8 +67,21 @@ enum Tag {
 	Tag_NE,
 	Tag_LE,
 	Tag_GE,
-};
 
+	Tag_Float,
+	Tag_Const,
+	Tag_Volatile,
+	Tag_Int,
+	Tag_Char,
+	Tag_Unsigned,
+	Tag_Signed,
+	Tag_Register,
+	Tag_If,
+	Tag_Else,
+	Tag_Do,
+	Tag_While,
+	Tag_Break
+};
 
 struct token {
 	union { 

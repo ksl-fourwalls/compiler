@@ -1,6 +1,8 @@
 # If the first argument is "run"...
+COMPILEFILE := stringbuf.c compile.c lexer.c parser.c
+OUTPUTFILE := compiler
 all:
-	gcc stringbuf.c compile.c lexer.c -g -o compiler
+	gcc $(COMPILEFILE) -g -o $(OUTPUTFILE)
 
 
 ifeq (run,$(firstword $(MAKECMDGOALS)))
@@ -19,7 +21,7 @@ run:
 
 
 debug:
-	gcc stringbuf.c compiler.c lexer.c -g -o compiler
-	gdb ./compiler 
+	gcc $(COMPILEFILE) -g -o $(OUTPUTFILE)
+	gdb ./$(OUTPUTFILE)
 clean:
-	rm compiler
+	rm $(OUTPUTFILE)

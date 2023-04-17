@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 
-
 static int32_t fnv_1a(const char* str)
 {
 	const int32_t FNV_offset_basis = 0x811c9dc5;
@@ -16,30 +15,54 @@ static int32_t fnv_1a(const char* str)
 		hash ^= (int32_t)*str;
 		hash *= FNV_prime;
 	}
-
 	return hash;
 
 }
 
 void initLexicalScanner(struct LexicalScanner* self, FILE *filp)
 {
-	const char* type[] = {
-		"float", "const", "volatile",
-		"int", "char", "unsigned", "signed",
+	struct {
+		const char* str;
+		enum Tag tag;
+	} keywords[] = {
+		{ "float", Tag_Float },
+		{ "const", Tag_Const },
+		{ "volatile", Tag_Volatile },
+		{ "int", Tag_Int },
+		{ "char", Tag_Char },
+		{ "unsigned", Tag_Unsigned },
+		{ "signed", Tag_Signed },
+		{ "register", Tag_Register },
+		{ "if", Tag_If },
+		{ "else", Tag_Else },
+		{ "do", Tag_Do },
+		{ "while", Tag_While },
+		{ "break", Tag_Break },
 	};
+
+
+
 	struct token* Word(char* string, enum Tag tag);
+	ENTRY e, *ep;
+
+	self->keywordTokens = (struct token *)malloc(ARRAYSIZE(keywords)*sizeof(struct token));
+
+	// create static hash table 
+	hcreate(ARRAYSIZE(keywords));
+
+	for (int idx = 0; idx < ARRAYSIZE(keywords); idx++)
+	{
+		e.key = (char *)keywords[idx].str;
+		e.data = (void *)((size_t)idx);
+		self->keywordTokens[idx].tag = keywords[idx].tag;
+		self->keywordTokens[idx].value.word = (char *)keywords[idx].str;
+		ep = hsearch(e, ENTER);
+	}
 
 	self->peek = ' ';
 	self->line = 1;
 	self->filp = filp;
 
-	self->type.buflen = ARRAYSIZE(type);
-	self->type.bufptr = malloc(self->type.buflen * sizeof(int32_t));
-
-	assert(self->type.bufptr != NULL);
-
-	for (int idx = 0; idx < ARRAYSIZE(type); idx++)
-		self->type.bufptr[idx] = fnv_1a(type[idx]);
 
 	self->Word.INC = Word("++", Tag_INC);
 	self->Word.DEC = Word("--", Tag_DEC);
@@ -69,12 +92,12 @@ struct token* Word(char* string, enum Tag tag)
 	m_Token->value.word = string;
 }
 
-struct token* Float(double value)
+struct token* FloatNumber(double value)
 {
 	struct token* m_Token = malloc(sizeof(struct token));
 	assert(m_Token != NULL);
 
-	m_Token->tag = Tag_Float;
+	m_Token->tag = Tag_FloatNumber;
 	m_Token->value.floatval = value;
 }
 
@@ -285,7 +308,7 @@ struct token* generateToken(struct LexicalScanner *self)
 				break;
 			x = x + (float)(self->peek-0x30) / d;
 		}
-		return Float(x);
+		return FloatNumber(x);
 	}
 
 	else if (isalpha(self->peek) || self->peek == '_')
@@ -293,6 +316,7 @@ struct token* generateToken(struct LexicalScanner *self)
 		struct string m_String = { 0 };
 		char* c_str;
 		int32_t strhash;
+		ENTRY e, *ep;
 
 		do {
 			string_push(&m_String, self->peek);
@@ -300,13 +324,13 @@ struct token* generateToken(struct LexicalScanner *self)
 		} while (isalnum(self->peek) || self->peek == '_');
 
 		c_str = string_cstr(&m_String);
-		strhash = fnv_1a(c_str);
+		e.key = c_str;
 
-		for (int idx = 0; idx < self->type.buflen; idx++)
-			if (self->type.bufptr[idx] == strhash)
-				return Word(c_str, Tag_type);
+		ep = hsearch(e, FIND);
+		if (ep != NULL)
+			return &self->keywordTokens[(long)ep->data];
 
-		return Word(string_cstr(&m_String), Tag_Identifier);
+		return Word(c_str, Tag_Identifier);
 	}
 
 	m_Token = Token(self->peek, Tag_Unknown); 
@@ -331,8 +355,8 @@ void printTokens(struct LexicalScanner* self)
 		switch (m_Token->tag)
 		{
 		case Tag_Number: printf(" %lld ", m_Token->value.integer); 	break;
-		case Tag_Float: printf(" %lf ", m_Token->value.floatval); 	break; 
-		case Tag_Char: printf(" %c ", (char)m_Token->value.integer); 	break;
+		case Tag_FloatNumber: printf(" %lf ", m_Token->value.floatval); 	break; 
+		case Tag_Byte: printf(" %c ", (char)m_Token->value.integer); 	break;
 		case Tag_Unknown: printf(" %c ", (char)m_Token->value.integer); break;
 		case Tag_Comment: printf("%s", m_Token->value.word); 		break;
 
@@ -342,15 +366,21 @@ void printTokens(struct LexicalScanner* self)
 			printf(" %s ", m_Token->value.word);
 			break;
 
-		case Tag_type: 
-			printf (" type: %s ", m_Token->value.word); 
-			       break;
+		default:
+			ENTRY e = { .key = m_Token->value.word }, *ep;
+			ep = hsearch(e, FIND);
+			if (ep != NULL)
+				printf(" %s ", m_Token->value.word);
+			break;
 		}
+
 	}
 	printf("\n");
+	fseek(self->filp, 0, SEEK_SET);
 }
 
 void freeLexicalScanner(struct LexicalScanner *self)
 {
-	free(self->type.bufptr);
+	free(self->keywordTokens);
+	hdestroy();
 }
